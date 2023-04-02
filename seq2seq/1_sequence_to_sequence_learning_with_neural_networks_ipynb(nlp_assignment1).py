@@ -677,7 +677,7 @@ def evaluate(model, iterator, criterion):
 
             output_dim = output.shape[-1]
             
-            Here, when we calculate the loss, we cut off the first element of each tensor to get:
+            # Here, when we calculate the loss, we cut off the first element of each tensor to get:
             output = output[1:].view(-1, output_dim)
             trg = trg[1:].view(-1)
 
@@ -737,9 +737,7 @@ test_loss = evaluate(model, test_iterator, criterion)
 
 print(f'| Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f} |')
 
-# what is test_iterator
-
-print(test_iterator)
+128 * 7 + 104
 
 def translate(model, iterator, SRC_vocab, TRG_vocab):
 
@@ -754,32 +752,32 @@ def translate(model, iterator, SRC_vocab, TRG_vocab):
             src = batch.src # 현재 배치의 소스 문장을 가져옵니다.
             trg = batch.trg # 현재 배치의 타겟 문장을 가져옵니다.
 
+            print(f"src.shape:{src.shape}/ trg.shape:{trg.shape}")
+            # src = [src len, batch size]
+            # trg = [trg len, batch size] # trg len : target 문장의 토큰의 개수
+
+            # Check translate result
+            print(f"Batch Num: {i}/ Batch Size: {len(batch)}")
+            print(f"{i}th Source:", " ".join([SRC_vocab.itos[t] for t in src[:, i].cpu().numpy()])) # i 번째 batch에서 i 번째 문장을 꺼내온다. 총 128 * 7 + 104 =  1000 : Number of testing examples: 1000
+            print(f"{i}th Target:", " ".join([TRG_vocab.itos[t] for t in trg[:, i].cpu().numpy()]))
+
+            src, trg = src[:, i].reshape(-1, 1), trg[:,i].reshape(-1, 1) # i번째 batch의 소스와 타켓을 모델에 넣어주기 위해, 차원을 묶어준다.
+
+            # src = [(src len) * batch size]
+            # trg = [(trg len) * batch size]
+
             output = model(src, trg, 0)  # teacher forcing을 비활성화
             
-            # src = [src len, batch size]
-            # trg = [trg len, batch size]
             # output = [trg len, batch size, output dim]
 
             output_dim = output.shape[-1] # 출력 어휘집의 크기
+            output = output.view(-1, output_dim) #(trg len - 1) * batch size, output dim] 형태로 변형
 
-            output = output[1:].view(-1, output_dim) # 첫 번째 토큰(<sos>)을 제거하고, (trg len - 1) * batch size, output dim] 형태로 변형
-            trg = trg[1:].view(-1) # 첫 번째 토큰(<sos>)을 제거하고, [(trg len - 1) * batch size] 형태로 변형
-
-            # trg = [(trg len - 1) * batch size]
             # output = [(trg len - 1) * batch size, output dim]
 
             # Convert output tensor (token IDs) to text
-            pred_tokens = [TRG_vocab.itos[t] for t in output.argmax(dim=-1).cpu().numpy()] # shape : (trg len - 1) * batch size
-
-            # Check translate result
-            print(f"Batch Num: {i}")
-            print("Source:", " ".join([SRC_vocab.itos[t] for t in src[:, i].cpu().numpy()]))
-
-            # 입력 소스 토큰의 배치 크기 만큼의 출력 타겟 혹은 예측 토큰의 결과 확인!
-            batch_size = trg.shape[0] // src.shape[1]
-            print("Target:", " ".join([TRG_vocab.itos[t] for t in trg[i * batch_size:(i + 1) * batch_size].cpu().numpy()]))
-            print("Predicted:", " ".join(pred_tokens[i * batch_size:(i + 1) * batch_size]))
-
+            pred_tokens = [TRG_vocab.itos[t] for t in output.argmax(dim=-1)] # max probability token shape : (trg len - 1) * batch size
+            print("Predicted:", " ".join(pred_tokens))
             print("")
 
 # load best performance model
